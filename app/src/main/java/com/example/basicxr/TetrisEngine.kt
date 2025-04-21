@@ -259,7 +259,7 @@ class TetrisEngine @Inject constructor() {
         val blocks = currentTetromino!!.getAbsolutePositions()
         for (pos in blocks) {
             if (pos.y >= 0 && pos.y < BOARD_HEIGHT && pos.x >= 0 && pos.x < BOARD_WIDTH) {
-                _boardState[pos.y][pos.x] = Cell(true, currentTetromino!!.getColor())
+                _boardState[pos.y][pos.x] = Cell(filled = true, locked = true, color = currentTetromino!!.getColor())
             }
         }
 
@@ -396,7 +396,7 @@ class TetrisEngine @Inject constructor() {
                 for (pos in ghostBlocks) {
                     if (pos.y >= 0 && pos.y < BOARD_HEIGHT && pos.x >= 0 && pos.x < BOARD_WIDTH) {
                         if (!displayBoard[pos.y][pos.x].filled) {
-                            displayBoard[pos.y][pos.x] = Cell(true, currentTetromino!!.getColor().copy(alpha = 0.3f))
+                            displayBoard[pos.y][pos.x] = Cell(true, color = currentTetromino!!.getColor().copy(alpha = 0.3f))
                         }
                     }
                 }
@@ -408,7 +408,7 @@ class TetrisEngine @Inject constructor() {
             val blocks = currentTetromino!!.getAbsolutePositions()
             for (pos in blocks) {
                 if (pos.y >= 0 && pos.y < BOARD_HEIGHT && pos.x >= 0 && pos.x < BOARD_WIDTH) {
-                    displayBoard[pos.y][pos.x] = Cell(true, currentTetromino!!.getColor())
+                    displayBoard[pos.y][pos.x] = Cell(true, color = currentTetromino!!.getColor())
                 }
             }
         }

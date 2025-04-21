@@ -7,25 +7,12 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
@@ -33,7 +20,6 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import androidx.xr.compose.platform.LocalSpatialCapabilities
 import androidx.xr.runtime.math.Pose
 import androidx.xr.runtime.math.Quaternion
 import androidx.xr.runtime.math.Vector3
@@ -56,13 +42,17 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     //    private var userForward: Pose by mutableStateOf(Pose(Vector3(0.0f, -0.8f, -1.5f))) // for emulator
-    private var userForward: Pose by mutableStateOf(Pose(Vector3(0.0f, -0.1f, -1.0f)))// for device
+    private var userForward: Pose by mutableStateOf(Pose(Vector3(-0.5f, -0.1f, -2.0f)))// for device
 
     private val sceneCoreSession by lazy { Session.create(this) }
 
     private val viewModel : TetrisViewModel by viewModels()
 
-    private val arr = Array(BOARD_HEIGHT) {
+    private val activeBlocks = Array(BOARD_HEIGHT) {
+        Array<GltfModelEntity?>(BOARD_WIDTH) { null }
+    }
+
+    private val shadowBlocks = Array(BOARD_HEIGHT) {
         Array<GltfModelEntity?>(BOARD_WIDTH) { null }
     }
 
@@ -95,9 +85,8 @@ class MainActivity : ComponentActivity() {
             val grid = ContentlessEntity.create(sceneCoreSession, "grid")
 
             val model = sceneCoreSession.loadGltfModel("box.glb") ?: throw RuntimeException("SceneCoreSession loadGltfModel returned null")
-            val modelCube = sceneCoreSession.loadGltfModel("cube.glb") ?: throw RuntimeException("SceneCoreSession loadGltfModel returned null")
-
-
+            val modelActive = sceneCoreSession.loadGltfModel("blank_block.glb") ?: throw RuntimeException("SceneCoreSession loadGltfModel returned null")
+            val modelShadow = sceneCoreSession.loadGltfModel("crate.glb") ?: throw RuntimeException("SceneCoreSession loadGltfModel returned null")
 
             for (y in 0..19) {
                 for (x in 0..9) {
@@ -110,7 +99,13 @@ class MainActivity : ComponentActivity() {
 
             for (y in 0..19) {
                 for (x in 0..9) {
-                    arr[y][x] = GltfModelEntity.create(sceneCoreSession, checkNotNull(modelCube) as GltfModel).apply {
+                    activeBlocks[y][x] = GltfModelEntity.create(sceneCoreSession, checkNotNull(modelActive) as GltfModel).apply {
+                        setParent(grid)
+                        setHidden(true)
+                        setScale(0.25f)
+                        setPose(Pose(Vector3(0f + (x * 0.5f), 7f - (y * 0.5f), -10f), Quaternion.Identity))
+                    }
+                    shadowBlocks[y][x] = GltfModelEntity.create(sceneCoreSession, checkNotNull(modelShadow) as GltfModel).apply {
                         setParent(grid)
                         setHidden(true)
                         setScale(0.25f)
@@ -118,17 +113,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-
-//            for (y in 19 downTo 0) {
-//                for (x in 9 downTo 0) {
-//                    arr[y][x] = GltfModelEntity.create(sceneCoreSession, checkNotNull(modelCube) as GltfModel).apply {
-//                        setParent(grid)
-//                        setHidden(true)
-//                        setScale(0.25f)
-//                        setPose(Pose(Vector3(0f + (x * 0.5f), 0f + (y * 0.5f), 0f), Quaternion.Identity))
-//                    }
-//                }
-//            }
 
             val endTime = System.currentTimeMillis()
 
@@ -144,12 +128,16 @@ class MainActivity : ComponentActivity() {
                 for (y in viewModel.board.value.indices) {
                     for (x in 0 until BOARD_WIDTH) {
                         val cell = viewModel.board.value[y][x]
-
                         if (cell.filled) {
-                            arr[y][x]?.setHidden(false)
-//                            arr[y][x]?.setColor(cell.color)
+
+                            if (cell.color.alpha < 0.5f)
+                                shadowBlocks[y][x]?.setHidden(false)
+                            else
+                                activeBlocks[y][x]?.setHidden(false)
+
                         } else {
-                            arr[y][x]?.setHidden(true)
+                            activeBlocks[y][x]?.setHidden(true)
+                            shadowBlocks[y][x]?.setHidden(true)
                         }
                     }
                 }

@@ -17,10 +17,14 @@ data class Position(val x: Int, val y: Int) {
 }
 
 // Represents a single cell on the board
-data class Cell(val filled: Boolean = false, val color: Color = Color.Transparent) {
+data class Cell(
+    val filled: Boolean = false,
+    val locked: Boolean = false,
+    val color: Color = Color.Transparent
+) {
     // Data classes automatically implement equals and hashCode,
     // but we'll explicitly define copy to ensure it works as expected
-    fun copy(): Cell = Cell(filled, color)
+    fun copy(): Cell = Cell(filled = filled, locked = locked, color = color)
 }
 
 // Enum representing different types of Tetromino (Tetris pieces)
